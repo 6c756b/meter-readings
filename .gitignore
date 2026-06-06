@@ -1,0 +1,5 @@
+.vscode/
+.claude/
+config.php
+data/*.json
+LEGACY-PROJECT/data/

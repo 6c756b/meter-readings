@@ -1,0 +1,653 @@
+/* Custom Properties */
+:root {
+  --color-primary:       #61828F;
+  --color-primary-hover: #7a9dab;
+  --color-primary-light: rgba(97, 130, 143, .18);
+  --color-bg:            #1D2844;
+  --color-surface:       #243256;
+  --color-surface-alt:   #1a2540;
+  --color-text:          #c4c4c4;
+  --color-text-muted:    #7d8499;
+  --color-border:        #2e3d6b;
+  --color-accent:        #FFEE88;
+  --color-danger:        salmon;
+  --color-danger-light:  rgba(136, 34, 51, .6);
+  --color-success:       #4ade80;
+  --color-warning:       #f59e0b;
+  --shadow-sm:           0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+  --shadow-md:           0 4px 6px rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.3);
+  --radius-sm:           .375rem;
+  --radius-md:           .625rem;
+  --radius-lg:           1rem;
+
+  /* Per-meter accent colors */
+  --meter-water:       #61828F;
+  --meter-electricity: #F59E0B;
+  --meter-gas:         #aed695;
+}
+
+/* Reset & Base */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+a { color: var(--color-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Layout */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.section { margin-bottom: 2rem; }
+
+/* KPI Cards */
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1rem;
+}
+
+/* Card */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Header */
+.app-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: .875rem 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.app-header .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.app-title svg { flex-shrink: 0; }
+
+/* Tab Navigation */
+.tab-nav {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 2rem;
+}
+
+.tab-nav .container {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-nav .container::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .875rem 1.375rem;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: .9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tab-btn:hover { color: var(--color-text); }
+
+/* Per-meter KPI accent */
+.tab-btn[data-meter="water"].active       { color: var(--color-text); border-bottom-color: var(--meter-water); }
+.tab-btn[data-meter="electricity"].active { color: var(--color-text); border-bottom-color: var(--meter-electricity); }
+.tab-btn[data-meter="gas"].active         { color: var(--color-text); border-bottom-color: var(--meter-gas); }
+
+.meter-panel[data-panel="water"]       .kpi-value { color: var(--meter-water); }
+.meter-panel[data-panel="electricity"] .kpi-value { color: var(--meter-electricity); }
+.meter-panel[data-panel="gas"]         .kpi-value { color: var(--meter-gas); }
+
+/* Section headings */
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 1rem;
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  transition: transform .15s ease, box-shadow .15s ease;
+  cursor: default;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-label {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--color-text-muted);
+}
+
+.kpi-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.1;
+}
+
+.kpi-unit {
+  font-size: .875rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.kpi-avg {
+  font-size: .75rem;
+  color: var(--color-text-muted);
+  opacity: .8;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem 1rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, opacity .15s, transform .1s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn:active { transform: scale(.97); }
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--color-primary-hover); }
+
+.btn-secondary {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.btn-secondary:hover { background: var(--color-border); }
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  padding: .3rem .65rem;
+  font-size: .8rem;
+}
+.btn-danger:hover {
+  background: var(--color-danger);
+  color: #fff;
+}
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .3rem .45rem;
+  line-height: 1;
+}
+
+/* Per-meter submit button color */
+.meter-panel[data-panel="water"]       .btn-primary { background: var(--meter-water); }
+.meter-panel[data-panel="water"]       .btn-primary:hover { background: #7a9dab; }
+.meter-panel[data-panel="electricity"] .btn-primary { background: var(--meter-electricity); color: #1a1a1a; }
+.meter-panel[data-panel="electricity"] .btn-primary:hover { background: #f6ab22; color: #1a1a1a; }
+.meter-panel[data-panel="gas"]         .btn-primary { background: var(--meter-gas); color: #1a1a1a; }
+.meter-panel[data-panel="gas"]         .btn-primary:hover { background: #cbefb4; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+/* Form */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.form-group label {
+  font-size: .8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: .5rem .75rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-size: .9375rem;
+  font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(97, 130, 143, .15);
+}
+
+.form-group input.input-error { border-color: var(--color-danger); }
+.form-group input.input-error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, .15); }
+
+.error-message {
+  font-size: .78rem;
+  color: var(--color-danger);
+  min-height: 1em;
+}
+
+.slot-preview {
+  font-size: .78rem;
+  color: var(--color-primary);
+  font-weight: 600;
+  min-height: 1em;
+}
+
+.form-actions {
+  display: flex;
+  align-items: flex-end;
+  padding-top: 1.3rem;
+}
+
+/* Threshold Slider */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.slider-label {
+  font-size: .875rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.slider-label strong {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 150px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+  transition: transform .1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: none;
+}
+
+.chart-title {
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: .75rem;
+}
+
+/* Chart Wrapper */
+.chart-wrapper {
+  position: relative;
+  height: 260px;
+}
+
+/* Table */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+
+.data-table th {
+  padding: .625rem .875rem;
+  text-align: left;
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: .625rem .875rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover { background: var(--color-surface-alt); }
+
+.data-table tbody tr.high-consumption { background: var(--color-danger-light); }
+.data-table tbody tr.high-consumption:hover {
+  background: var(--color-danger-light);
+  filter: brightness(.97);
+}
+
+.consumption-high   { color: var(--color-danger); font-weight: 600; }
+.consumption-normal { color: var(--color-text-muted); }
+.consumption-avg    { color: var(--color-text-muted); font-weight: 400; }
+.no-data            { color: var(--color-text-muted); font-style: italic; }
+
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem;
+  padding: .875rem 0 .25rem;
+}
+
+.page-btn {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: .375rem;
+  padding: .35rem .75rem;
+  cursor: pointer;
+  font-size: .875rem;
+  line-height: 1;
+  transition: background .15s;
+}
+.page-btn:hover:not(:disabled) { background: var(--color-primary); color: #fff; }
+.page-btn:disabled { opacity: .35; cursor: default; }
+
+.page-info {
+  font-size: .8125rem;
+  color: var(--color-text-muted);
+  min-width: 7rem;
+  text-align: center;
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Toast */
+.toast {
+  padding: .75rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-size: .875rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  max-width: 340px;
+  animation: toastIn .3s ease forwards;
+  pointer-events: auto;
+}
+
+.toast-error   { background: var(--color-danger); color: #fff; }
+.toast-success { background: var(--color-success); color: #fff; }
+.toast-info    { background: var(--color-primary); color: #fff; }
+.toast-warning { background: var(--color-warning); color: #fff; }
+
+.toast.removing { animation: toastOut .3s ease forwards; }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--color-text-muted);
+  font-size: .9375rem;
+}
+
+/* Section title row */
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.section-title-row .section-title { margin-bottom: 0; }
+
+.btn-sm {
+  padding: .3rem .65rem;
+  font-size: .8125rem;
+}
+
+/* Contract table */
+.contract-table { margin-top: .75rem; }
+.contract-form  { padding-top: .75rem; border-top: 1px solid var(--color-border); margin-bottom: .75rem; }
+/* Contract info tooltip */
+.contract-info-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  cursor: default;
+  position: relative;
+}
+.contract-info-icon:hover { color: var(--color-accent); }
+.contract-info-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  background: #3b4f7d;
+  color: var(--color-text);
+  border: 1px solid #5566a0;
+  border-radius: 4px;
+  padding: .4rem .6rem;
+  font-size: .8rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  max-width: 22rem;
+  min-width: 8rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.contract-info-icon:hover::after { opacity: 1; }
+
+.tab-btn[data-meter="stats"].active { color: var(--color-text); border-bottom-color: var(--color-accent); }
+
+/* Stats Overview */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.stats-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stats-col-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  padding-bottom: .875rem;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.stats-col[data-col="water"]       .stats-col-header { color: var(--meter-water);       border-bottom-color: var(--meter-water); }
+.stats-col[data-col="electricity"] .stats-col-header { color: var(--meter-electricity); border-bottom-color: var(--meter-electricity); }
+.stats-col[data-col="gas"]         .stats-col-header { color: var(--meter-gas);         border-bottom-color: var(--meter-gas); }
+
+.stats-kpis {
+  display: flex;
+  flex-direction: column;
+  gap: .375rem;
+}
+
+.stats-kpi {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .5rem .625rem;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+}
+
+.stats-kpi-label {
+  font-size: .7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--color-text-muted);
+  padding-top: .25rem;
+  white-space: nowrap;
+}
+
+.stats-kpi-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: .2rem;
+  text-align: right;
+}
+
+.stats-kpi-value {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stats-col[data-col="water"]       .stats-kpi-value { color: var(--meter-water); }
+.stats-col[data-col="electricity"] .stats-kpi-value { color: var(--meter-electricity); }
+.stats-col[data-col="gas"]         .stats-kpi-value { color: var(--meter-gas); }
+
+.stats-kpi--cost { border-top: 1px solid var(--color-border); margin-top: .25rem; padding-top: .5rem; }
+.stats-kpi-value--cost { color: var(--color-accent) !important; }
+
+.stats-kpi-unit {
+  font-size: .75rem;
+  color: var(--color-text-muted);
+}
+
+.stats-kpi-sub {
+  width: 100%;
+  font-size: .7rem;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.chart-wrapper-sm {
+  position: relative;
+  height: 160px;
+}
+
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .app-header .container { flex-wrap: wrap; }
+  .kpi-value { font-size: 1.5rem; }
+  .tab-btn { padding: .75rem .875rem; font-size: .875rem; }
+}
