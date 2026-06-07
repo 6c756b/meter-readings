@@ -33,6 +33,7 @@ const METERS = {
     csvName:          'strom',
     hasTime:          false,
     demoReading:      4850.0,
+    weeklyKPI:        true,
   },
   gas: {
     label:            'Gas',
@@ -49,6 +50,7 @@ const METERS = {
     csvName:          'gas',
     hasTime:          false,
     demoReading:      1234.5,
+    weeklyKPI:        true,
   },
 };
 
@@ -188,21 +190,65 @@ function detectAnomalies(dailyData, threshold) {
   return anomalies;
 }
 
+function dayToWeekKey(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const dow = d.getDay();
+  const mon = new Date(d);
+  mon.setDate(mon.getDate() - (dow === 0 ? 6 : dow - 1));
+  return mon.toISOString().slice(0, 10);
+}
+
+function calcWeeklyConsumption(daily) {
+  const map = new Map();
+  for (const [day, val] of daily) {
+    const key = dayToWeekKey(day);
+    map.set(key, (map.get(key) ?? 0) + val);
+  }
+  return map;
+}
+
+function weekAnomaliesSet(dailyAnomalies) {
+  const set = new Set();
+  for (const day of dailyAnomalies) set.add(dayToWeekKey(day));
+  return set;
+}
+
+function calcMonthlyConsumption(daily) {
+  const map = new Map();
+  for (const [day, val] of daily) {
+    const key = day.slice(0, 7);
+    map.set(key, (map.get(key) ?? 0) + val);
+  }
+  return map;
+}
+
+function monthAnomaliesSet(dailyAnomalies) {
+  const set = new Set();
+  for (const day of dailyAnomalies) set.add(day.slice(0, 7));
+  return set;
+}
+
+function fmtMonth(yyyymm) {
+  const [y, m] = yyyymm.split('-');
+  return new Date(+y, +m - 1, 1).toLocaleDateString('de-DE', { month: 'short', year: '2-digit' });
+}
+
 function getKPIValues(readings, factor) {
-  if (!readings.length) return { current: null, today: null, week: null, month: null };
+  if (!readings.length) return { current: null, today: null, week: null, month: null, weeklyAvg: null };
   const sorted = [...readings].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   const current = sorted.at(-1).reading;
   const daily = calcDailyConsumption(sorted, factor);
   const anchor = sorted.at(-1).timestamp.slice(0, 10);
   const anchorMs = new Date(anchor + 'T12:00:00').getTime();
-  let todayV = 0, weekV = 0, monthV = 0;
+  let todayV = 0, weekV = 0, monthV = 0, yearV = 0;
   for (const [day, val] of daily) {
     const diffDays = Math.round((anchorMs - new Date(day + 'T12:00:00').getTime()) / 86400000);
     if (day === anchor) todayV += val;
     if (diffDays < 7)   weekV  += val;
     if (diffDays < 30)  monthV += val;
+    if (diffDays < 365) yearV  += val;
   }
-  return { current, today: todayV, week: weekV, month: monthV };
+  return { current, today: todayV, week: weekV, month: monthV, lastYear: yearV };
 }
 
 
@@ -322,7 +368,7 @@ function showToast(message, type = 'info') {
 // Render: KPIs
 function renderKPIs(type) {
   const m = METERS[type];
-  const { current, today, week, month } = getKPIValues(state.meters[type].readings ?? [], m.consumFactor);
+  const { current, today, week, month, lastYear } = getKPIValues(state.meters[type].readings ?? [], m.consumFactor);
 
   const fmt  = v => v === null ? '—' : fmtConsump(v, m);
   const avg  = (v, days) => {
@@ -330,8 +376,10 @@ function renderKPIs(type) {
     return `ø ${fmtConsump(v / days, m)} ${m.consumUnit}/Tag`;
   };
 
+  const todayDisplay = m.weeklyKPI ? lastYear : today;
+
   el(`${type}-kpi-current`).textContent      = current !== null ? fmtReading(current, m) : '—';
-  el(`${type}-kpi-today`).textContent        = fmt(today);
+  el(`${type}-kpi-today`).textContent        = fmt(todayDisplay);
   el(`${type}-kpi-week`).textContent         = fmt(week);
   el(`${type}-kpi-month`).textContent        = fmt(month);
   el(`${type}-kpi-week-avg`).textContent     = avg(week, 7);
@@ -425,30 +473,20 @@ function renderDailyChart(type) {
   const ms = state.meters[type];
   if (ms.charts.daily) { ms.charts.daily.destroy(); ms.charts.daily = null; }
 
-  const readings  = ms.readings ?? [];
-  const daily     = calcDailyConsumption(readings, m.consumFactor);
-  const anomalies = detectAnomalies(daily, ms.threshold);
+  const readings      = ms.readings ?? [];
+  const daily         = calcDailyConsumption(readings, m.consumFactor);
+  const monthly       = calcMonthlyConsumption(daily);
+  const monthAnomaly  = monthAnomaliesSet(detectAnomalies(daily, ms.threshold));
 
-  const anchor    = getChartAnchor(readings);
-  const sortedAll = [...readings].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-  const firstDate = new Date((sortedAll[0]?.timestamp ?? anchor.toISOString()).slice(0, 10) + 'T12:00:00');
-  const daysToShow = Math.min(Math.round((anchor - firstDate) / 86400000) + 1, CONFIG.CHART_DAYS_MAX);
-
-  const labels = [];
-  for (let i = daysToShow - 1; i >= 0; i--) {
-    const d = new Date(anchor);
-    d.setDate(d.getDate() - i);
-    labels.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-  }
-
-  const factor = Math.pow(10, m.consumDecimals);
-  const data     = labels.map(d => Math.round((daily.get(d) ?? 0) * factor) / factor);
-  const bgColors = labels.map(d => anomalies.has(d) ? 'salmon' : m.color);
+  const labels   = [...monthly.keys()].sort().slice(-24);
+  const factor   = Math.pow(10, m.consumDecimals);
+  const data     = labels.map(mo => Math.round((monthly.get(mo) ?? 0) * factor) / factor);
+  const bgColors = labels.map(mo => monthAnomaly.has(mo) ? 'salmon' : m.color);
 
   ms.charts.daily = new Chart(el(`${type}-chart-daily`), {
     type: 'bar',
     data: {
-      labels: labels.map(d => fmtDate(d)),
+      labels: labels.map(fmtMonth),
       datasets: [{
         label: `Verbrauch (${m.consumUnit})`,
         data,
@@ -470,9 +508,9 @@ function renderDailyChart(type) {
           borderWidth: 1,
           callbacks: {
             afterBody(ctx) {
-              const day = labels[ctx[0].dataIndex];
+              const mo = labels[ctx[0].dataIndex];
               const comments = readings
-                .filter(r => dateStrFromTs(r.timestamp) === day && r.comment)
+                .filter(r => dateStrFromTs(r.timestamp).slice(0, 7) === mo && r.comment)
                 .map(r => r.comment);
               return comments.length ? ['', ...comments] : [];
             },
@@ -481,7 +519,7 @@ function renderDailyChart(type) {
       },
       scales: {
         x: {
-          ticks: { color: CHART_COLORS.tick, maxTicksLimit: 10, maxRotation: 45 },
+          ticks: { color: CHART_COLORS.tick, maxTicksLimit: 24, maxRotation: 45 },
           grid:  { color: CHART_COLORS.grid },
         },
         y: {
@@ -492,6 +530,115 @@ function renderDailyChart(type) {
       },
     },
   });
+}
+
+let modalChart = null;
+let modalType  = null;
+let modalGran  = 'month';
+let modalRange = 'all';
+
+function filterByRange(labels, range) {
+  if (range === 'all') return labels;
+  const last = labels.at(-1);
+  if (!last) return labels;
+  const anchorStr = last.length === 7 ? last + '-01' : last;
+  const cutoff = new Date(anchorStr + 'T12:00:00');
+  const months = { '3m': 3, '6m': 6, '1y': 12, '2y': 24 }[range];
+  cutoff.setMonth(cutoff.getMonth() - months);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  return labels.filter(l => (l.length === 7 ? l + '-01' : l) >= cutoffStr);
+}
+
+function renderModalChart() {
+  const m        = METERS[modalType];
+  const ms       = state.meters[modalType];
+  const readings = ms.readings ?? [];
+  const daily    = calcDailyConsumption(readings, m.consumFactor);
+  const anomalies = detectAnomalies(daily, ms.threshold);
+  const factor   = Math.pow(10, m.consumDecimals);
+
+  let allLabels, dataMap, anomSet, granLabel;
+
+  if (modalGran === 'month') {
+    const monthly = calcMonthlyConsumption(daily);
+    anomSet    = monthAnomaliesSet(anomalies);
+    allLabels  = [...monthly.keys()].sort();
+    dataMap    = monthly;
+    granLabel  = 'Monatsverbrauch';
+  } else if (modalGran === 'week') {
+    const weekly = calcWeeklyConsumption(daily);
+    anomSet    = weekAnomaliesSet(anomalies);
+    allLabels  = [...weekly.keys()].sort();
+    dataMap    = weekly;
+    granLabel  = 'Wochenverbrauch';
+  } else {
+    anomSet    = anomalies;
+    allLabels  = [...daily.keys()].sort();
+    dataMap    = daily;
+    granLabel  = 'Tagesverbrauch';
+  }
+
+  const labels   = filterByRange(allLabels, modalRange);
+  const data     = labels.map(k => Math.round((dataMap.get(k) ?? 0) * factor) / factor);
+  const bgColors = labels.map(k => anomSet.has(k) ? 'salmon' : m.color);
+
+  el('chart-modal-title').textContent = `${m.label} – ${granLabel}`;
+
+  const fmtLabel = modalGran === 'month' ? fmtMonth : fmtDate;
+
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+  modalChart = new Chart(el('chart-modal-canvas'), {
+    type: 'bar',
+    data: {
+      labels: labels.map(fmtLabel),
+      datasets: [{ label: `Verbrauch (${m.consumUnit})`, data, backgroundColor: bgColors, borderRadius: 3, borderSkipped: false }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: CHART_COLORS.tooltip,
+          titleColor: CHART_COLORS.text,
+          bodyColor:  CHART_COLORS.text,
+          borderColor: CHART_COLORS.grid,
+          borderWidth: 1,
+          callbacks: {
+            afterBody(ctx) {
+              const key = labels[ctx[0].dataIndex];
+              const comments = readings.filter(r => {
+                const d = dateStrFromTs(r.timestamp);
+                if (gran === 'month') return d.slice(0, 7) === key && r.comment;
+                if (gran === 'week')  return dayToWeekKey(d) === key && r.comment;
+                return d === key && r.comment;
+              }).map(r => r.comment);
+              return comments.length ? ['', ...comments] : [];
+            },
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { color: CHART_COLORS.tick, maxTicksLimit: 24, maxRotation: 45 }, grid: { color: CHART_COLORS.grid } },
+        y: { ticks: { color: CHART_COLORS.tick }, grid: { color: CHART_COLORS.grid }, title: { display: true, text: m.consumUnit, color: CHART_COLORS.tick } },
+      },
+    },
+  });
+}
+
+function openChartModal(type) {
+  modalType  = type;
+  modalGran  = 'month';
+  modalRange = 'all';
+  document.querySelectorAll('.chart-gran-btn').forEach(b   => b.classList.toggle('active', b.dataset.gran  === 'month'));
+  document.querySelectorAll('.chart-range-btn').forEach(b  => b.classList.toggle('active', b.dataset.range === 'all'));
+  el('chart-modal').classList.add('is-open');
+  renderModalChart();
+}
+
+function closeChartModal() {
+  el('chart-modal').classList.remove('is-open');
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
 }
 
 function renderTrendChart(type) {
@@ -651,26 +798,21 @@ function renderStatsChart(type) {
   const ms = state.meters[type];
   if (ms.charts.stats) { ms.charts.stats.destroy(); ms.charts.stats = null; }
 
-  const readings  = ms.readings ?? [];
-  const daily     = calcDailyConsumption(readings, m.consumFactor);
-  const anomalies = detectAnomalies(daily, ms.threshold);
-  const anchor    = getChartAnchor(readings);
+  const readings     = ms.readings ?? [];
+  const daily        = calcDailyConsumption(readings, m.consumFactor);
+  const monthly      = calcMonthlyConsumption(daily);
+  const monthAnomaly = monthAnomaliesSet(detectAnomalies(daily, ms.threshold));
 
-  const labels = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(anchor);
-    d.setDate(d.getDate() - i);
-    labels.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-  }
+  const labels = [...monthly.keys()].sort().slice(-12);
 
-  const factor = Math.pow(10, m.consumDecimals);
-  const data     = labels.map(d => Math.round((daily.get(d) ?? 0) * factor) / factor);
-  const bgColors = labels.map(d => anomalies.has(d) ? 'salmon' : m.color);
+  const factor   = Math.pow(10, m.consumDecimals);
+  const data     = labels.map(mo => Math.round((monthly.get(mo) ?? 0) * factor) / factor);
+  const bgColors = labels.map(mo => monthAnomaly.has(mo) ? 'salmon' : m.color);
 
   ms.charts.stats = new Chart(el(`stats-${type}-chart`), {
     type: 'bar',
     data: {
-      labels: labels.map(d => new Date(d + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })),
+      labels: labels.map(fmtMonth),
       datasets: [{
         data,
         backgroundColor: bgColors,
@@ -708,12 +850,12 @@ function renderStatsChart(type) {
 
 function renderStatsColumn(type) {
   const m = METERS[type];
-  const { today, week, month } = getKPIValues(state.meters[type].readings ?? [], m.consumFactor);
+  const { today, week, month, lastYear } = getKPIValues(state.meters[type].readings ?? [], m.consumFactor);
 
   const fmt = v => v === null ? '—' : fmtConsump(v, m);
   const avg = (v, days) => v === null ? '' : `ø ${fmtConsump(v / days, m)} ${m.consumUnit}/Tag`;
 
-  el(`stats-${type}-today`).textContent     = fmt(today);
+  el(`stats-${type}-today`).textContent     = fmt(lastYear);
   el(`stats-${type}-week`).textContent      = fmt(week);
   el(`stats-${type}-month`).textContent     = fmt(month);
   el(`stats-${type}-week-avg`).textContent  = avg(week, 7);
@@ -1031,6 +1173,30 @@ async function init() {
   const initial = ['stats', ...METER_TYPES].includes(hash) ? hash : 'stats';
 
   setupEventListeners();
+
+  document.addEventListener('click', e => {
+    const granBtn = e.target.closest('.chart-gran-btn');
+    if (granBtn) {
+      modalGran = granBtn.dataset.gran;
+      document.querySelectorAll('.chart-gran-btn').forEach(b => b.classList.toggle('active', b === granBtn));
+      renderModalChart();
+      return;
+    }
+    const rangeBtn = e.target.closest('.chart-range-btn');
+    if (rangeBtn) {
+      modalRange = rangeBtn.dataset.range;
+      document.querySelectorAll('.chart-range-btn').forEach(b => b.classList.toggle('active', b === rangeBtn));
+      renderModalChart();
+      return;
+    }
+    if (e.target.closest('.btn-chart-expand')) {
+      openChartModal(e.target.closest('.btn-chart-expand').dataset.type);
+    } else if (e.target.closest('#chart-modal-close') || e.target.id === 'chart-modal-backdrop') {
+      closeChartModal();
+    }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeChartModal(); });
+
   switchTab(initial);
 
   if (initial === 'water') updateSlotPreview();

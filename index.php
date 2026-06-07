@@ -22,6 +22,7 @@ $meters = [
         'hasTime'          => false,
         'placeholder'      => 'z. B. 4850',
         'step'             => '1',
+        'weeklyKPI'        => true,
         'icon'             => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
     ],
     'gas' => [
@@ -32,6 +33,7 @@ $meters = [
         'hasTime'          => false,
         'placeholder'      => 'z. B. 1234',
         'step'             => '1',
+        'weeklyKPI'        => true,
         'icon'             => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
     ],
 ];
@@ -62,7 +64,7 @@ $key = htmlspecialchars($_GET['key']);
           <path d="M3090 2449 c-112 -23 -208 -100 -258 -207 -22 -47 -27 -71 -27 -142 0 -77 3 -92 33 -152 36 -75 95 -133 170 -169 71 -34 198 -38 274 -9 75 28 155 101 193 177 27 52 30 68 30 153 0 83 -3 102 -27 150 -71 145 -237 230 -388 199z m160 -178 c53 -27 92 -89 98 -155 11 -134 -102 -228 -243 -202 -71 14 -144 107 -145 187 0 19 12 58 26 87 50 100 161 135 264 83z"/>
         </g>
       </svg>
-      Zähler-Tracker
+      Zähler-Tracker<span class="app-version">v<?= APP_VERSION ?></span>
     </a>
     <div style="display:flex;gap:.5rem;align-items:center">
       <a class="btn btn-secondary" href="mobile.php?key=<?= htmlspecialchars($key, ENT_QUOTES) ?>" style="text-decoration:none">
@@ -109,7 +111,7 @@ $key = htmlspecialchars($_GET['key']);
         </div>
         <div class="stats-kpis">
           <div class="stats-kpi">
-            <span class="stats-kpi-label">Heute</span>
+            <span class="stats-kpi-label">Letztes Jahr</span>
             <span class="stats-kpi-right">
               <span class="stats-kpi-value" id="stats-<?= $t ?>-today">—</span>
               <span class="stats-kpi-unit"><?= $cfg['consumUnit'] ?></span>
@@ -211,7 +213,7 @@ $key = htmlspecialchars($_GET['key']);
         <span class="kpi-unit"><?= $cfg['unit'] ?></span>
       </div>
       <div class="card kpi-card">
-        <span class="kpi-label">Heute</span>
+        <span class="kpi-label"><?= !empty($cfg['weeklyKPI']) ? 'Letztes Jahr' : 'Heute' ?></span>
         <span class="kpi-value" id="<?= $t ?>-kpi-today">—</span>
         <span class="kpi-unit"><?= $cfg['consumUnit'] ?></span>
       </div>
@@ -270,7 +272,12 @@ $key = htmlspecialchars($_GET['key']);
   <section class="section">
     <div class="grid-2">
       <div class="card">
-        <p class="chart-title">Tagesverbrauch (alle Einträge, max. 120 Tage)</p>
+        <div class="chart-title-row">
+          <p class="chart-title">Monatsverbrauch (letzte 2 Jahre)</p>
+          <button class="btn-chart-expand" data-type="<?= $t ?>" title="Gesamtverlauf anzeigen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         <div class="chart-wrapper">
           <canvas id="<?= $t ?>-chart-daily"></canvas>
         </div>
@@ -363,6 +370,35 @@ $key = htmlspecialchars($_GET['key']);
 </main>
 
 <div class="toast-container" id="toast-container"></div>
+
+<div id="chart-modal" class="chart-modal">
+  <div class="chart-modal-backdrop" id="chart-modal-backdrop"></div>
+  <div class="chart-modal-content card">
+    <div class="chart-modal-header">
+      <span id="chart-modal-title" class="chart-title"></span>
+      <button id="chart-modal-close" class="btn btn-secondary btn-icon" title="Schließen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="chart-modal-controls">
+      <div class="chart-gran-toggle">
+        <button class="chart-gran-btn active" data-gran="month">Monat</button>
+        <button class="chart-gran-btn" data-gran="week">Woche</button>
+        <button class="chart-gran-btn" data-gran="day">Tag</button>
+      </div>
+      <div class="chart-gran-toggle">
+        <button class="chart-range-btn" data-range="3m">3M</button>
+        <button class="chart-range-btn" data-range="6m">6M</button>
+        <button class="chart-range-btn" data-range="1y">1J</button>
+        <button class="chart-range-btn" data-range="2y">2J</button>
+        <button class="chart-range-btn active" data-range="all">Alle</button>
+      </div>
+    </div>
+    <div class="chart-wrapper chart-wrapper--large">
+      <canvas id="chart-modal-canvas"></canvas>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

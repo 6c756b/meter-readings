@@ -79,6 +79,14 @@ a:hover { text-decoration: underline; }
   box-shadow: var(--shadow-sm);
 }
 
+.app-version {
+  font-size: .7rem;
+  color: var(--color-text-muted);
+  margin-left: .4rem;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
 .app-header .container {
   display: flex;
   align-items: center;
@@ -95,6 +103,7 @@ a:hover { text-decoration: underline; }
   color: var(--color-primary);
   text-decoration: none;
 }
+.app-title:hover { text-decoration: none; }
 
 .app-title svg { flex-shrink: 0; }
 
@@ -310,7 +319,7 @@ a:hover { text-decoration: underline; }
 .form-actions {
   display: flex;
   align-items: flex-end;
-  padding-top: 1.3rem;
+  padding-top: 1.5rem;
 }
 
 /* Threshold Slider */
@@ -638,6 +647,101 @@ input[type="range"]::-moz-range-thumb {
 .chart-wrapper-sm {
   position: relative;
   height: 160px;
+}
+
+.chart-wrapper--large {
+  position: relative;
+  height: 420px;
+}
+
+.chart-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .75rem;
+}
+.chart-title-row .chart-title {
+  margin-bottom: 0;
+}
+
+.btn-chart-expand {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 4px 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  transition: color .15s, background .15s;
+}
+.btn-chart-expand:hover {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+
+.chart-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.chart-modal.is-open {
+  display: flex;
+}
+.chart-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .65);
+}
+.chart-modal-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 960px;
+  padding: 1.5rem;
+}
+.chart-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .75rem;
+}
+
+.chart-modal-controls {
+  display: flex;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.chart-gran-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+.chart-gran-btn,
+.chart-range-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  padding: .25rem .65rem;
+  border-radius: calc(var(--radius-sm) - 2px);
+  font-size: .8125rem;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.chart-gran-btn.active,
+.chart-range-btn.active {
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 @media (max-width: 900px) {
