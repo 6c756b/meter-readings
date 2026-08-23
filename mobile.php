@@ -3,6 +3,21 @@ require_once __DIR__ . '/config.php';
 $key = $_GET['key'] ?? '';
 if ($key !== SECRET_KEY) { http_response_code(404); exit; }
 $safeKey = htmlspecialchars($key, ENT_QUOTES);
+
+function lastReadingPlaceholder(string $type): string {
+    $file = __DIR__ . '/data/' . $type . '.json';
+    if (!file_exists($file)) return '';
+    $readings = json_decode(file_get_contents($file), true) ?? [];
+    if (!$readings) return '';
+    usort($readings, fn($a, $b) => strcmp($a['timestamp'], $b['timestamp']));
+    $last = end($readings)['reading'];
+    return $type === 'water'
+        ? number_format($last, 1, ',', '.')
+        : number_format($last, 0, ',', '.');
+}
+$lastWater       = lastReadingPlaceholder('water');
+$lastElectricity = lastReadingPlaceholder('electricity');
+$lastGas         = lastReadingPlaceholder('gas');
 ?><!DOCTYPE html>
 <html lang="de">
 <head>
@@ -62,6 +77,7 @@ body {
   -webkit-appearance: none;
 }
 .mob-input:focus { outline: none; border-color: var(--color-primary); }
+.mob-input::placeholder { color: var(--color-text-muted); opacity: .6; }
 .mob-input--date { margin-bottom: .5rem; }
 .mob-input--time { max-width: 108px; flex-shrink: 0; }
 .mob-input--reading {
@@ -71,7 +87,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .mob-input--comment { font-size: .9rem; color: var(--color-text-muted); margin-bottom: .6rem; }
-.mob-input--comment::placeholder { color: var(--color-text-muted); opacity: .6; }
 
 .mob-slot { font-size: .8rem; color: var(--color-text-muted); margin-bottom: .5rem; min-height: 1.1em; }
 
@@ -123,7 +138,7 @@ body {
   </div>
   <div class="mob-slot" id="water-slot"></div>
   <input type="number" id="water-reading" class="mob-input mob-input--reading"
-    step="0.1" min="0" inputmode="decimal" autocomplete="off" placeholder="0,0">
+    step="0.1" min="0" inputmode="decimal" autocomplete="off" placeholder="<?= $lastWater !== '' ? $lastWater : '0,0' ?>">
   <input type="text" id="water-comment" class="mob-input mob-input--comment"
     placeholder="Kommentar (optional)" maxlength="200">
   <button class="mob-btn mob-btn--water" id="water-submit">Speichern</button>
@@ -139,7 +154,7 @@ body {
   </div>
   <input type="date" id="electricity-date" class="mob-input mob-input--date">
   <input type="number" id="electricity-reading" class="mob-input mob-input--reading"
-    step="1" min="0" inputmode="numeric" autocomplete="off" placeholder="0">
+    step="1" min="0" inputmode="numeric" autocomplete="off" placeholder="<?= $lastElectricity !== '' ? $lastElectricity : '0' ?>">
   <input type="text" id="electricity-comment" class="mob-input mob-input--comment"
     placeholder="Kommentar (optional)" maxlength="200">
   <button class="mob-btn mob-btn--electricity" id="electricity-submit">Speichern</button>
@@ -155,7 +170,7 @@ body {
   </div>
   <input type="date" id="gas-date" class="mob-input mob-input--date">
   <input type="number" id="gas-reading" class="mob-input mob-input--reading"
-    step="1" min="0" inputmode="numeric" autocomplete="off" placeholder="0">
+    step="1" min="0" inputmode="numeric" autocomplete="off" placeholder="<?= $lastGas !== '' ? $lastGas : '0' ?>">
   <input type="text" id="gas-comment" class="mob-input mob-input--comment"
     placeholder="Kommentar (optional)" maxlength="200">
   <button class="mob-btn mob-btn--gas" id="gas-submit">Speichern</button>
